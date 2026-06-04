@@ -10,6 +10,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 jobs:
   deploy:
@@ -30,14 +31,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python .github/scripts/gen_hourly_html.py
 
+      - name: Verify index.html
+        run: |
+          if [ -f index.html ]; then
+            echo "index.html: $(wc -c < index.html) bytes"
+          else
+            echo "ERROR: index.html not found"
+            exit 1
+          fi
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload to Pages
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: news-html
           path: index.html
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: news-html
