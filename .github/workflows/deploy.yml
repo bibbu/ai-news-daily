@@ -1,15 +1,5 @@
 # GitHub Actions workflow for AI News daily deployment
-# Place this file at: .github/workflows/deploy.yml
-# in your ai-news-daily repository
-#
-# SETUP STEPS:
-# 1. Create a new public repo: https://github.com/new
-#    - Name: ai-news-daily
-#    - Public
-# 2. Enable GitHub Pages:
-#    - Settings → Pages → Source: GitHub Actions
-# 3. Add this file to the repo's .github/workflows/deploy.yml
-# 4. Trigger via repository_dispatch or workflow_dispatch
+# Pipeline pushes news HTML files to the repo, this workflow deploys them to GitHub Pages
 
 name: Deploy AI News
 
@@ -20,48 +10,50 @@ on:
         description: 'Date (YYYY-MM-DD)'
         required: false
         default: ''
-  schedule:
-    - cron: '35 7 * * *'  # 每天 07:35 UTC = 15:35 北京时间
   repository_dispatch:
     types: [deploy-news]
 
-# Sets permissions of the GITHUB_TOKEN
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Download news artifact
-        run: |
-          mkdir -p public
-          # Option A: Download from Feishu (requires FEISHU_APP_ID + FEISHU_APP_SECRET env vars)
-          if [ -n "$FEISHU_APP_ID" ] && [ -n "$FEISHU_APP_SECRET" ]; then
-            echo "Fetching latest artifact from Feishu..."
-            # TODO: Implement Feishu file download using API
-            # curl -L -H "Authorization: Bearer $FEISHU_TOKEN" \
-            #   "https://open.feishu.cn/open-apis/drive/v1/files/${FEISHU_FILE_TOKEN}/download"
-          fi
-          # Option B: Pipeline pushes artifact via git (see push_artifact.sh)
-          # For now, use workflow_dispatch to manually place files in /tmp/pipeline_output/
-          if [ -d "/tmp/pipeline_output" ]; then
-            cp -r /tmp/pipeline_output/* public/
-          fi
+        with:
+          # Fetch all branches so we have the latest pushed files
+          fetch-depth: 0
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+
+      # Pipeline pushes files to the repo root
+      # Upload everything (except .git and workflow files) as the pages artifact
+      - name: Prepare pages artifact
+        run: |
+          mkdir -p public
+          # Copy all news files from repo root to public/
+          # The pipeline pushes news_YYYY-MM-DD.html to repo root
+          for f in *.html; do
+            [ -f "$f" ] && cp "$f" public/ && echo "Deployed: $f"
+          done
+          # Copy news_caster video if present
+          for f in *.mp4; do
+            [ -f "$f" ] && cp "$f" public/ && echo "Deployed video: $f"
+          done
+          # Copy deep research reports
+          for d in deep_*/; do
+            [ -d "$d" ] && mkdir -p "public/$d" && cp "$d"*.html "$d"*.pdf "public/$d" 2>/dev/null || true
+          done
+          ls -la public/ || echo "No files to deploy"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
