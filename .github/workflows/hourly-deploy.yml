@@ -1,0 +1,54 @@
+name: Hourly AI News Deploy
+
+on:
+  schedule:
+    # 每小时 :05 分触发
+    - cron: '5 * * * *'
+  workflow_dispatch:  # 支持手动触发
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch latest news and generate HTML
+        run: python .github/scripts/gen_hourly_html.py
+
+      - name: Verify index.html exists
+        run: |
+          OUTPUT_DIR="${OUTPUT_DIR:-/tmp/ai-news-workflow/output}"
+          INDEX="$OUTPUT_DIR/index.html"
+          if [ -f "$INDEX" ]; then
+            echo "index.html ready ($(wc -c < "$INDEX") bytes)"
+          else
+            echo "ERROR: index.html not found"
+            exit 1
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.OUTPUT_DIR || '/tmp/ai-news-workflow/output' }}/index.html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
