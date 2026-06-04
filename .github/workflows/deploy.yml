@@ -1,0 +1,77 @@
+# GitHub Actions workflow for AI News daily deployment
+# Place this file at: .github/workflows/deploy.yml
+# in your ai-news-daily repository
+#
+# SETUP STEPS:
+# 1. Create a new public repo: https://github.com/new
+#    - Name: ai-news-daily
+#    - Public
+# 2. Enable GitHub Pages:
+#    - Settings → Pages → Source: GitHub Actions
+# 3. Add this file to the repo's .github/workflows/deploy.yml
+# 4. Trigger via repository_dispatch or workflow_dispatch
+
+name: Deploy AI News
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date (YYYY-MM-DD)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '35 7 * * *'  # 每天 07:35 UTC = 15:35 北京时间
+  repository_dispatch:
+    types: [deploy-news]
+
+# Sets permissions of the GITHUB_TOKEN
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download news artifact
+        run: |
+          mkdir -p public
+          # Option A: Download from Feishu (requires FEISHU_APP_ID + FEISHU_APP_SECRET env vars)
+          if [ -n "$FEISHU_APP_ID" ] && [ -n "$FEISHU_APP_SECRET" ]; then
+            echo "Fetching latest artifact from Feishu..."
+            # TODO: Implement Feishu file download using API
+            # curl -L -H "Authorization: Bearer $FEISHU_TOKEN" \
+            #   "https://open.feishu.cn/open-apis/drive/v1/files/${FEISHU_FILE_TOKEN}/download"
+          fi
+          # Option B: Pipeline pushes artifact via git (see push_artifact.sh)
+          # For now, use workflow_dispatch to manually place files in /tmp/pipeline_output/
+          if [ -d "/tmp/pipeline_output" ]; then
+            cp -r /tmp/pipeline_output/* public/
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Print deployment URL
+        run: |
+          echo "Deployed to: ${{ steps.deployment.outputs.page_url }}"
