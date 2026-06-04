@@ -3015,10 +3015,12 @@ window.tldjs = tldjs; // expose globally for non-module callers
 
   function renderReports() {
     var list = $('reportList');
-    // Skip re-render if news cards were server-side pre-rendered (attachment works without JS)
-    if (window.__preRendered && list && list.children.length > 0) {
+    // Skip re-render on load if news cards were server-side pre-rendered
+    // But always render when triggered by filterReports (search/filter)
+    if (window.__preRendered && list && list.children.length > 0 && !window.__filterActive) {
       return;
     }
+    window.__filterActive = false;
     var filtered = getFilteredReports();
     list.innerHTML = '';
 
@@ -3187,6 +3189,7 @@ window.tldjs = tldjs; // expose globally for non-module callers
   };
 
   window.filterReports = function() {
+    window.__filterActive = true;
     currentSearch = $('searchInput').value;
     renderReports();
   };
