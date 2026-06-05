@@ -114,7 +114,7 @@ def generate_html(items, date_str, updated_at):
         col = tag_color.get(cat, "#6b7280")
         pub = (it.get("publishedAt") or it.get("published") or "")[:16]
 
-        summary_short = s[:120] + "..." if len(s) > 120 else s
+        summary_short = ((s or "")[:120] + "..." if len(s or "") > 120 else (s or ""))
         # 处理HTML特殊字符
         for old, new in [("&","&amp;"),("<","&lt;"),(">","&gt;")]:
             t = t.replace(old, new)
@@ -248,8 +248,14 @@ def main():
 
     # 2. 抓新新闻（mode=all，take=500）
     print("Fetching latest news (mode=all, take=500)...")
-    new_items = fetch_news_all(take=500, mode="all")
+    try:
+        new_items = fetch_news_all(take=500, mode="all")
+    except Exception as e:
+        print(f"  Fetch failed: {e}")
+        new_items = []
     print(f"  New items fetched: {len(new_items)}")
+    if len(new_items) == 0:
+        print("  WARNING: API returned 0 items, preserving existing history")
 
     # 3. 合并+去重
     merged = merge_and_dedupe(new_items, history, max_age_hours=MAX_AGE_HOURS)
