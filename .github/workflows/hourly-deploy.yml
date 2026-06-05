@@ -9,10 +9,14 @@ on:
     types: [deploy-pages]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
   actions: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -42,20 +46,18 @@ jobs:
             exit 1
           fi
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: news-html
-          path: index.html
+          path: 'index.html'
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
-        with:
-          artifact_name: news-html
+        uses: actions/deploy-pages@v4
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      - name: Print deployment URL
+        run: |
+          echo "Deployed to: ${{ steps.deployment.outputs.page_url }}"
