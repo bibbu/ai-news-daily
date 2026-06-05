@@ -51,6 +51,9 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
         with:
           artifact_name: news-html
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
