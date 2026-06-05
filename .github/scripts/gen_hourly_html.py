@@ -84,10 +84,10 @@ def merge_and_dedupe(new_items, history, max_age_hours=24):
         except:
             return datetime.min.replace(tzinfo=timezone.utc)
 
-    merged.sort(key=lambda x: age(x.get("published") or x.get("fetched_at")), reverse=True)
+    merged.sort(key=lambda x: age(x.get("publishedAt") or x.get("published") or x.get("fetched_at")), reverse=True)
 
     # 截断到24h窗口
-    trimmed = [it for it in merged if age(it.get("published") or it.get("fetched_at")) >= cutoff]
+    trimmed = [it for it in merged if age(it.get("publishedAt") or it.get("published") or it.get("fetched_at")) >= cutoff]
 
     print(f"Merged: {len(history)} history + {len(new_items)} new = {len(merged)} total → trimmed to {len(trimmed)} (24h window)")
     print(f"New items added: {added}")
@@ -112,7 +112,7 @@ def generate_html(items, date_str, updated_at):
         cat = it.get("category", "other")
         em = emoji_map.get(cat, "📰")
         col = tag_color.get(cat, "#6b7280")
-        pub = it.get("published", "")[:16] if it.get("published") else ""
+        pub = (it.get("publishedAt") or it.get("published") or "")[:16]
 
         summary_short = s[:120] + "..." if len(s) > 120 else s
         # 处理HTML特殊字符
